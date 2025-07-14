@@ -64,16 +64,19 @@ year_min, year_max = year_range
 # 선택 결과 필터링
 # ----------------------------
 selected_df = pd.DataFrame()
-if gu1 != "선택하세요" and dong1 != "선택하세요":
+gu1_label = f"{gu1} {dong1}" if gu1 != "선택하세요" and dong1 != "선택하세요" else None
+gu2_label = f"{gu2} {dong2}" if gu2 != "선택하세요" and dong2 != "선택하세요" else None
+
+if gu1_label:
     df1 = data1[(data1['구'] == gu1) & (data1['동'] == dong1) & (data1['연도'].between(year_min, year_max))].copy()
-    df1['지역'] = f"{gu1} {dong1}"
-    df1['구분'] = f"{gu1} {dong1}"
+    df1['지역'] = gu1_label
+    df1['구분'] = gu1_label
     selected_df = pd.concat([selected_df, df1], ignore_index=True)
 
-if gu2 != "선택하세요" and dong2 != "선택하세요":
+if gu2_label:
     df2 = data1[(data1['구'] == gu2) & (data1['동'] == dong2) & (data1['연도'].between(year_min, year_max))].copy()
-    df2['지역'] = f"{gu2} {dong2}"
-    df2['구분'] = f"{gu2} {dong2}"
+    df2['지역'] = gu2_label
+    df2['구분'] = gu2_label
     selected_df = pd.concat([selected_df, df2], ignore_index=True)
 
 # 서울 전체 평균
@@ -119,21 +122,30 @@ st.subheader("2. 서울 전체 자치구 평당가격 막대그래프")
 avg_by_gu = data1[data1['연도'].between(year_min, year_max)].groupby('구')['p2'].mean().reset_index()
 avg_by_gu = avg_by_gu.sort_values('p2', ascending=False)
 
-def classify_gu(x):
-    if x == gu1:
-        return f"{gu1} {dong1}"
-    elif x == gu2:
-        return f"{gu2} {dong2}"
+avg_by_gu['구'] = pd.Categorical(avg_by_gu['구'], categories=avg_by_gu['구'], ordered=True)
+
+def assign_color_label(row):
+    if row['구'] == gu1:
+        return gu1_label
+    elif row['구'] == gu2:
+        return gu2_label
     else:
         return '기타'
 
-avg_by_gu['구분'] = avg_by_gu['구'].apply(classify_gu)
+avg_by_gu['구분'] = avg_by_gu.apply(assign_color_label, axis=1)
+
+color_map = {
+    '기타': '#d3d3d3',
+    gu1_label: '#1f77b4',  # 짙은 파랑
+    gu2_label: '#aec7e8'   # 옅은 하늘색
+}
 
 fig_bar = px.bar(
     avg_by_gu,
     x='구',
     y='p2',
     color='구분',
+    color_discrete_map=color_map,
     title=f"자치구별 평균 평당가격 (연도: {year_min} ~ {year_max})",
     labels={'p2': '평당가격(만원)', '구': '자치구'}
 )
@@ -149,10 +161,10 @@ scatter_df = data2[data2['연도'].between(year_min, year_max)].copy()
 scatter_df['지역'] = scatter_df['구'] + " " + scatter_df['동']
 
 highlight_regions = {}
-if gu1 != "선택하세요" and dong1 != "선택하세요":
-    highlight_regions[f"{gu1} {dong1}"] = f"{gu1} {dong1}"
-if gu2 != "선택하세요" and dong2 != "선택하세요":
-    highlight_regions[f"{gu2} {dong2}"] = f"{gu2} {dong2}"
+if gu1_label:
+    highlight_regions[gu1_label] = gu1_label
+if gu2_label:
+    highlight_regions[gu2_label] = gu2_label
 
 scatter_df['구분'] = scatter_df['지역'].apply(lambda x: highlight_regions[x] if x in highlight_regions else '기타')
 
@@ -161,6 +173,7 @@ fig_scatter = px.scatter(
     x='p2',
     y='p1',
     color='구분',
+    color_discrete_map=color_map,
     hover_data=['단지명', '구', '동', '연월'],
     title="단지별 평당가격 vs 평균가격 산점도",
     labels={'p2': '평당가격(만원)', 'p1': '평균가격(만원)'}
