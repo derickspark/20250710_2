@@ -141,54 +141,69 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-
 # ----------------------------
 # ④ 다중 지역 비교: 평균가격/평당가격 추이
 # ----------------------------
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("## 📌 지역별 비교")
 
-# 유니크 지역 리스트 만들기
-data1['지역'] = data1['구'] + " " + data1['동']
-unique_regions = sorted(data1['지역'].unique())
+# 구 선택
+gu_multi = st.sidebar.multiselect("자치구 선택", sorted(data1['구'].unique()))
 
-selected_regions = st.sidebar.multiselect(
-    "비교할 지역을 선택하세요 (구 + 동)",
-    unique_regions
-)
+dong_multi = []
+if gu_multi:
+    # 선택된 구에 해당하는 동만 필터링
+    dong_multi = st.sidebar.multiselect(
+        "법정동 선택 (복수 선택 가능)",
+        sorted(data1[data1['구'].isin(gu_multi)]['동'].unique())
+    )
 
-if selected_regions:
-    st.subheader("④ 선택한 지역의 월별 평균가격 및 평당가격 비교")
+# 구-동 조합 만들기
+if gu_multi and dong_multi:
+    # 선택된 (구, 동) 쌍
+    selected_pairs = data1[
+        data1['구'].isin(gu_multi) & data1['동'].isin(dong_multi)
+    ][['구', '동']].drop_duplicates()
 
-    # 필터링
-    subset_multi = data1[data1['지역'].isin(selected_regions)].copy()
+    # 지역명 생성
+    selected_pairs['지역'] = selected_pairs['구'] + " " + selected_pairs['동']
+    selected_region_list = selected_pairs['지역'].tolist()
+
+    # 지역 필터링
+    data1['지역'] = data1['구'] + " " + data1['동']
+    subset_multi = data1[data1['지역'].isin(selected_region_list)].copy()
     subset_multi = subset_multi.sort_values(['지역', '연월'])
 
-    # 평균가격 그래프 (p1)
-    fig1 = px.line(
-        subset_multi,
-        x='연월',
-        y='p1',
-        color='지역',
-        title="📊 평균가격(만원) 추이 비교",
-        labels={'p1': '평균가격(만원)', '연월': '연월'},
-    )
-    fig1.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+    if not subset_multi.empty:
+        st.subheader("④ 선택한 지역의 월별 평균가격 및 평당가격 비교")
 
-    # 평당가격 그래프 (p2)
-    fig2 = px.line(
-        subset_multi,
-        x='연월',
-        y='p2',
-        color='지역',
-        title="📊 평당가격(만원) 추이 비교",
-        labels={'p2': '평당가격(만원)', '연월': '연월'},
-    )
-    fig2.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+        # 평균가격 그래프
+        fig1 = px.line(
+            subset_multi,
+            x='연월',
+            y='p1',
+            color='지역',
+            title="📊 평균가격(만원) 추이 비교",
+            labels={'p1': '평균가격(만원)', '연월': '연월'}
+        )
+        fig1.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
 
-    # 화면에 출력
-    st.plotly_chart(fig1, use_container_width=True)
-    st.plotly_chart(fig2, use_container_width=True)
+        # 평당가격 그래프
+        fig2 = px.line(
+            subset_multi,
+            x='연월',
+            y='p2',
+            color='지역',
+            title="📊 평당가격(만원) 추이 비교",
+            labels={'p2': '평당가격(만원)', '연월': '연월'}
+        )
+        fig2.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+
+        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True)
+    else:
+        st.warning("선택한 지역에 해당하는 데이터가 없습니다.")
 else:
-    st.info("왼쪽 사이드바에서 비교할 지역(구+동)을 하나 이상 선택하세요.")
+    st.info("비교할 구와 동을 모두 선택하세요.")
 
