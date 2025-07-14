@@ -67,16 +67,19 @@ selected_df = pd.DataFrame()
 if gu1 != "선택하세요" and dong1 != "선택하세요":
     df1 = data1[(data1['구'] == gu1) & (data1['동'] == dong1) & (data1['연도'].between(year_min, year_max))].copy()
     df1['지역'] = f"{gu1} {dong1}"
+    df1['구분'] = '지역1'
     selected_df = pd.concat([selected_df, df1], ignore_index=True)
 
 if gu2 != "선택하세요" and dong2 != "선택하세요":
     df2 = data1[(data1['구'] == gu2) & (data1['동'] == dong2) & (data1['연도'].between(year_min, year_max))].copy()
     df2['지역'] = f"{gu2} {dong2}"
+    df2['구분'] = '지역2'
     selected_df = pd.concat([selected_df, df2], ignore_index=True)
 
 # 서울 전체 평균
 seoul_avg = data1[data1['연도'].between(year_min, year_max)].groupby('연월_날짜')[['p1', 'p2']].mean().reset_index()
 seoul_avg['지역'] = '서울 전체'
+seoul_avg['구분'] = '서울 전체'
 
 # 병합 및 정렬
 plot_df = pd.concat([selected_df, seoul_avg], ignore_index=True).sort_values(['지역', '연월_날짜'])
@@ -90,7 +93,7 @@ fig1 = px.line(
     plot_df,
     x='연월_날짜',
     y='p1',
-    color='지역',
+    color='구분',
     title="평균가격(만원) 추이",
     labels={'p1': '평균가격(만원)', '연월_날짜': '연월'}
 )
@@ -98,7 +101,7 @@ fig2 = px.line(
     plot_df,
     x='연월_날짜',
     y='p2',
-    color='지역',
+    color='구분',
     title="평당가격(만원) 추이",
     labels={'p2': '평당가격(만원)', '연월_날짜': '연월'}
 )
@@ -115,7 +118,16 @@ st.subheader("2. 서울 전체 자치구 평당가격 막대그래프")
 
 avg_by_gu = data1[data1['연도'].between(year_min, year_max)].groupby('구')['p2'].mean().reset_index()
 avg_by_gu = avg_by_gu.sort_values('p2', ascending=False)
-avg_by_gu['구분'] = avg_by_gu['구'].apply(lambda x: '선택' if x in [gu1, gu2] else '기타')
+
+def classify_gu(x):
+    if x == gu1:
+        return '지역1'
+    elif x == gu2:
+        return '지역2'
+    else:
+        return '기타'
+
+avg_by_gu['구분'] = avg_by_gu['구'].apply(classify_gu)
 
 fig_bar = px.bar(
     avg_by_gu,
@@ -124,7 +136,7 @@ fig_bar = px.bar(
     color='구분',
     title=f"자치구별 평균 평당가격 (연도: {year_min} ~ {year_max})",
     labels={'p2': '평당가격(만원)', '구': '자치구'},
-    color_discrete_map={'선택': 'crimson', '기타': 'lightgray'}
+    color_discrete_map={'지역1': 'royalblue', '지역2': 'darkorange', '기타': 'lightgray'}
 )
 fig_bar.update_layout(font=dict(family="Noto Sans KR"), xaxis_tickangle=-45)
 st.plotly_chart(fig_bar, use_container_width=True)
@@ -137,23 +149,23 @@ st.subheader("3. 전 단지 평당가격 및 평균가격 산점도")
 scatter_df = data2[data2['연도'].between(year_min, year_max)].copy()
 scatter_df['지역'] = scatter_df['구'] + " " + scatter_df['동']
 
-highlight_regions = []
+highlight_regions = {}
 if gu1 != "선택하세요" and dong1 != "선택하세요":
-    highlight_regions.append(f"{gu1} {dong1}")
+    highlight_regions[f"{gu1} {dong1}"] = '지역1'
 if gu2 != "선택하세요" and dong2 != "선택하세요":
-    highlight_regions.append(f"{gu2} {dong2}")
+    highlight_regions[f"{gu2} {dong2}"] = '지역2'
 
-scatter_df['강조'] = scatter_df['지역'].apply(lambda x: '선택지역' if x in highlight_regions else '기타')
+scatter_df['구분'] = scatter_df['지역'].apply(lambda x: highlight_regions[x] if x in highlight_regions else '기타')
 
 fig_scatter = px.scatter(
     scatter_df,
     x='p2',
     y='p1',
-    color='강조',
+    color='구분',
     hover_data=['단지명', '구', '동', '연월'],
     title="단지별 평당가격 vs 평균가격 산점도",
     labels={'p2': '평당가격(만원)', 'p1': '평균가격(만원)'},
-    color_discrete_map={'선택지역': 'firebrick', '기타': 'lightgray'}
+    color_discrete_map={'지역1': 'royalblue', '지역2': 'darkorange', '기타': 'lightgray'}
 )
 fig_scatter.update_layout(font=dict(family="Noto Sans KR"))
 st.plotly_chart(fig_scatter, use_container_width=True)
