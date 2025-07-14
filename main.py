@@ -67,13 +67,13 @@ selected_df = pd.DataFrame()
 if gu1 != "선택하세요" and dong1 != "선택하세요":
     df1 = data1[(data1['구'] == gu1) & (data1['동'] == dong1) & (data1['연도'].between(year_min, year_max))].copy()
     df1['지역'] = f"{gu1} {dong1}"
-    df1['구분'] = '지역1'
+    df1['구분'] = f"{gu1} {dong1}"
     selected_df = pd.concat([selected_df, df1], ignore_index=True)
 
 if gu2 != "선택하세요" and dong2 != "선택하세요":
     df2 = data1[(data1['구'] == gu2) & (data1['동'] == dong2) & (data1['연도'].between(year_min, year_max))].copy()
     df2['지역'] = f"{gu2} {dong2}"
-    df2['구분'] = '지역2'
+    df2['구분'] = f"{gu2} {dong2}"
     selected_df = pd.concat([selected_df, df2], ignore_index=True)
 
 # 서울 전체 평균
@@ -121,9 +121,9 @@ avg_by_gu = avg_by_gu.sort_values('p2', ascending=False)
 
 def classify_gu(x):
     if x == gu1:
-        return '지역1'
+        return f"{gu1} {dong1}"
     elif x == gu2:
-        return '지역2'
+        return f"{gu2} {dong2}"
     else:
         return '기타'
 
@@ -135,8 +135,7 @@ fig_bar = px.bar(
     y='p2',
     color='구분',
     title=f"자치구별 평균 평당가격 (연도: {year_min} ~ {year_max})",
-    labels={'p2': '평당가격(만원)', '구': '자치구'},
-    color_discrete_map={'지역1': 'royalblue', '지역2': 'darkorange', '기타': 'lightgray'}
+    labels={'p2': '평당가격(만원)', '구': '자치구'}
 )
 fig_bar.update_layout(font=dict(family="Noto Sans KR"), xaxis_tickangle=-45)
 st.plotly_chart(fig_bar, use_container_width=True)
@@ -151,9 +150,9 @@ scatter_df['지역'] = scatter_df['구'] + " " + scatter_df['동']
 
 highlight_regions = {}
 if gu1 != "선택하세요" and dong1 != "선택하세요":
-    highlight_regions[f"{gu1} {dong1}"] = '지역1'
+    highlight_regions[f"{gu1} {dong1}"] = f"{gu1} {dong1}"
 if gu2 != "선택하세요" and dong2 != "선택하세요":
-    highlight_regions[f"{gu2} {dong2}"] = '지역2'
+    highlight_regions[f"{gu2} {dong2}"] = f"{gu2} {dong2}"
 
 scatter_df['구분'] = scatter_df['지역'].apply(lambda x: highlight_regions[x] if x in highlight_regions else '기타')
 
@@ -164,8 +163,7 @@ fig_scatter = px.scatter(
     color='구분',
     hover_data=['단지명', '구', '동', '연월'],
     title="단지별 평당가격 vs 평균가격 산점도",
-    labels={'p2': '평당가격(만원)', 'p1': '평균가격(만원)'},
-    color_discrete_map={'지역1': 'royalblue', '지역2': 'darkorange', '기타': 'lightgray'}
+    labels={'p2': '평당가격(만원)', 'p1': '평균가격(만원)'}
 )
 fig_scatter.update_layout(font=dict(family="Noto Sans KR"))
 st.plotly_chart(fig_scatter, use_container_width=True)
