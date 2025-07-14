@@ -41,8 +41,6 @@ st.dataframe(
     .rename(columns={'p1': '평균가격(만원)', 'p2': '평당가격(만원)'})
     .style.format({'평균가격(만원)': '{:,.0f}', '평당가격(만원)': '{:,.0f}'})
 )
-
-
 # ----------------------------
 # ② 월별 최고/최저 단지 (data2 기준)
 # ----------------------------
@@ -54,51 +52,46 @@ if subset2.empty:
 else:
     by_month = subset2.groupby('계약년월')
 
-    max_p1_list = []
-    min_p1_list = []
-    max_p2_list = []
-    min_p2_list = []
+    p1_rows = []
+    p2_rows = []
 
     for name, group in by_month:
-        max_p1 = group.loc[group['p1'].idxmax()].copy()
-        max_p1['구분'] = '최고'
-        max_p1_list.append(max_p1)
+        # 평균가격 기준
+        max_p1 = group.loc[group['p1'].idxmax()]
+        min_p1 = group.loc[group['p1'].idxmin()]
 
-        min_p1 = group.loc[group['p1'].idxmin()].copy()
-        min_p1['구분'] = '최저'
-        min_p1_list.append(min_p1)
+        p1_rows.append({
+            '계약년월': name,
+            '최고가격단지': max_p1['단지명'],
+            '최고가격(만원)': int(max_p1['p1']),
+            '최저가격단지': min_p1['단지명'],
+            '최저가격(만원)': int(min_p1['p1']),
+        })
 
-        max_p2 = group.loc[group['p2'].idxmax()].copy()
-        max_p2['구분'] = '최고'
-        max_p2_list.append(max_p2)
+        # 평당가격 기준
+        max_p2 = group.loc[group['p2'].idxmax()]
+        min_p2 = group.loc[group['p2'].idxmin()]
 
-        min_p2 = group.loc[group['p2'].idxmin()].copy()
-        min_p2['구분'] = '최저'
-        min_p2_list.append(min_p2)
+        p2_rows.append({
+            '계약년월': name,
+            '최고가격단지': max_p2['단지명'],
+            '최고가격(만원)': int(max_p2['p2']),
+            '최저가격단지': min_p2['단지명'],
+            '최저가격(만원)': int(min_p2['p2']),
+        })
 
-    df_p1 = pd.DataFrame(max_p1_list + min_p1_list)[['계약년월', '단지명', 'p1', '구분']]
-    df_p2 = pd.DataFrame(max_p2_list + min_p2_list)[['계약년월', '단지명', 'p2', '구분']]
-
-    df_p1 = df_p1.sort_values(['계약년월', '구분'])
-    df_p2 = df_p2.sort_values(['계약년월', '구분'])
+    df_p1 = pd.DataFrame(p1_rows).sort_values('계약년월')
+    df_p2 = pd.DataFrame(p2_rows).sort_values('계약년월')
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("📈 **계약년월별 평균가격 최고/최저 단지**")
-        st.dataframe(
-            df_p1.rename(columns={'p1': '평균가격(만원)'})
-            .style.format({'평균가격(만원)': '{:,.0f}'})
-        )
+        st.markdown("📈 **평균가격 기준 최고/최저 단지**")
+        st.dataframe(df_p1)
 
     with col2:
-        st.markdown("🏢 **계약년월별 평당가격 최고/최저 단지**")
-        st.dataframe(
-            df_p2.rename(columns={'p2': '평당가격(만원)'})
-            .style.format({'평당가격(만원)': '{:,.0f}'})
-        )
-
-
+        st.markdown("🏢 **평당가격 기준 최고/최저 단지**")
+        st.dataframe(df_p2)
 
 
 # ----------------------------
