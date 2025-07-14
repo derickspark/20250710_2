@@ -92,10 +92,14 @@ st.plotly_chart(fig2, use_container_width=True)
 # ----------------------------
 # ② 서울 전체 자치구 평당가격 막대그래프
 # ----------------------------
+# ----------------------------
+# ② 서울 전체 자치구 평당가격 막대그래프 (내림차순 정렬)
+# ----------------------------
 st.subheader("② 서울 전체 자치구 평당가격 비교 (선택 연도 기준)")
 
 avg_by_gu = data1[data1['연도'].isin(year_multi)].groupby('구')['p2'].mean().reset_index()
 avg_by_gu['구분'] = avg_by_gu['구'].apply(lambda x: '선택' if x in gu_multi else '기타')
+avg_by_gu = avg_by_gu.sort_values('p2', ascending=False)
 
 fig_bar = px.bar(
     avg_by_gu,
@@ -113,20 +117,24 @@ st.plotly_chart(fig_bar, use_container_width=True)
 # ----------------------------
 # ③ 서울 전체 단지 평당가격 산점도
 # ----------------------------
-st.subheader("③ 서울 전체 단지의 평당가격 산점도")
+ # ----------------------------
+# ③ 서울 전체 단지 평당가격 vs 평균가격 산점도
+# ----------------------------
+st.subheader("③ 서울 전체 단지의 평당가격 vs 평균가격 산점도")
 
 scatter_df = data2[data2['연도'].isin(year_multi)].copy()
 scatter_df['강조'] = scatter_df['동'].apply(lambda x: '선택지역' if x in dong_multi else '기타')
 
 fig_scatter = px.scatter(
     scatter_df,
-    x='연월_날짜',
-    y='p2',
+    x='p2',
+    y='p1',
     color='강조',
-    hover_data=['단지명', '구', '동'],
-    title="📌 단지별 평당가격 산점도",
-    labels={'p2': '평당가격(만원)', '연월_날짜': '연월'}
+    hover_data=['단지명', '구', '동', '연월'],
+    title="📌 단지별 평당가격 vs 평균가격 산점도",
+    labels={'p2': '평당가격(만원)', 'p1': '평균가격(만원)'},
+    color_discrete_map={'선택지역': 'firebrick', '기타': 'lightgray'}
 )
-fig_scatter.update_layout(font=dict(family="Noto Sans KR"), xaxis_tickangle=-45)
+fig_scatter.update_layout(font=dict(family="Noto Sans KR"), xaxis_tickangle=0)
 
 st.plotly_chart(fig_scatter, use_container_width=True)
