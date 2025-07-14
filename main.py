@@ -10,11 +10,10 @@ def load_data():
     df1 = pd.read_csv("data1.csv", dtype={'연월': str})
     df2 = pd.read_csv("data2.csv", dtype={'연월': str})
 
-    # "2015년 01월" → datetime으로 변환
+    # "2015년 01월" → datetime 변환
     df1['연월_날짜'] = pd.to_datetime(df1['연월'].str.replace("년 ", "-").str.replace("월", ""), format="%Y-%m")
     df2['연월_날짜'] = pd.to_datetime(df2['연월'].str.replace("년 ", "-").str.replace("월", ""), format="%Y-%m")
 
-    # 지역 구분 필드 생성
     df1['지역'] = df1['구'] + " " + df1['동']
     df2['지역'] = df2['구'] + " " + df2['동']
 
@@ -26,58 +25,102 @@ st.set_page_config(page_title="서울 아파트 시세 분석", layout="wide")
 st.title("서울 아파트 시세 분석 대시보드")
 
 # ----------------------------
-# 사이드바: 지역 선택
+# 사이드바: 지역 + 연도 선택
 # ----------------------------
-st.sidebar.markdown("## 📌 지역 선택")
+st.sidebar.header("📌 비교 조건 선택")
+
 gu_multi = st.sidebar.multiselect("자치구 선택", sorted(data1['구'].unique()))
-
-dong_multi = []
-if gu_multi:
-    dong_multi = st.sidebar.multiselect(
-        "법정동 선택", 
-        sorted(data1[data1['구'].isin(gu_multi)]['동'].unique())
-    )
+dong_multi = st.sidebar.multiselect("법정동 선택", sorted(data1['동'].unique()))
+year_multi = st.sidebar.multiselect("연도 선택", sorted(data1['연도'].unique()))
 
 # ----------------------------
-# 선택된 지역 필터링
+# 필터 적용
 # ----------------------------
-if gu_multi and dong_multi:
-    selected_df = data1[
-        (data1['구'].isin(gu_multi)) & 
-        (data1['동'].isin(dong_multi))
-    ].copy()
+if not gu_multi or not dong_multi or not year_multi:
+    st.info("자치구, 법정동, 연도를 모두 선택하세요.")
+    st.stop()
 
-    if selected_df.empty:
-        st.warning("선택한 지역에 해당하는 데이터가 없습니다.")
-    else:
-        st.subheader("① 선택 지역의 평균가격 및 평당가격 추이 비교")
+filtered1 = data1[
+    data1['구'].isin(gu_multi) &
+    data1['동'].isin(dong_multi) &
+    data1['연도'].isin(year_multi)
+].copy()
 
-        # 지역명 다시 지정
-        selected_df['지역'] = selected_df['구'] + " " + selected_df['동']
-        selected_df = selected_df.sort_values(['지역', '연월_날짜'])
+filtered2 = data2[
+    data2['구'].isin(gu_multi) &
+    data2['동'].isin(dong_multi) &
+    data2['연도'].isin(year_multi)
+].copy()
 
-        # 평균가격(p1) 그래프
-        fig1 = px.line(
-            selected_df,
-            x='연월_날짜',
-            y='p1',
-            color='지역',
-            title="📊 평균가격(만원) 추이 비교",
-            labels={'p1': '평균가격(만원)', '연월_날짜': '연월'}
-        )
-        fig1.update_layout(font=dict(family="Noto Sans KR, sans-serif"), xaxis_tickangle=-45)
-        st.plotly_chart(fig1, use_container_width=True)
+# ----------------------------
+# 📈 평균가격/평당가격 추이 그래프
+# ----------------------------
+st.subheader("① 선택 지역의 월별 평균가격 및 평당가격 추이")
 
-        # 평당가격(p2) 그래프
-        fig2 = px.line(
-            selected_df,
-            x='연월_날짜',
-            y='p2',
-            color='지역',
-            title="📊 평당가격(만원) 추이 비교",
-            labels={'p2': '평당가격(만원)', '연월_날짜': '연월'}
-        )
-        fig2.update_layout(font=dict(family="Noto Sans KR, sans-serif"), xaxis_tickangle=-45)
-        st.plotly_chart(fig2, use_container_width=True)
-else:
-    st.info("왼쪽에서 자치구와 법정동을 모두 선택하세요.")
+filtered1['지역'] = filtered1['구'] + " " + filtered1['동']
+filtered1 = filtered1.sort_values(['지역', '연월_날짜'])
+
+fig1 = px.line(
+    filtered1,
+    x='연월_날짜',
+    y='p1',
+    color='지역',
+    title="📊 평균가격(만원) 추이",
+    labels={'p1': '평균가격(만원)', '연월_날짜': '연월'}
+)
+fig1.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+
+fig2 = px.line(
+    filtered1,
+    x='연월_날짜',
+    y='p2',
+    color='지역',
+    title="📊 평당가격(만원) 추이",
+    labels={'p2': '평당가격(만원)', '연월_날짜': '연월'}
+)
+fig2.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+
+st.plotly_chart(fig1, use_container_width=True)
+st.plotly_chart(fig2, use_container_width=True)
+
+# ----------------------------
+# 📊 자치구별 평균 평당가격 막대그래프 (선택 연도 기준)
+# ----------------------------
+st.subheader("② 서울 전체 자치구 평당가격 비교")
+
+avg_by_gu = data1[data1['연도'].isin(year_multi)].groupby('구')['p2'].mean().reset_index()
+avg_by_gu['선택지역'] = avg_by_gu['구'].apply(lambda x: '선택' if x in gu_multi else '기타')
+
+fig_bar = px.bar(
+    avg_by_gu,
+    x='구',
+    y='p2',
+    color='선택지역',
+    title=f"📊 연도 {', '.join(map(str, year_multi))} 기준 자치구별 평균 평당가격(만원)",
+    labels={'p2': '평당가격(만원)', '구': '자치구'},
+    color_discrete_map={'선택': 'crimson', '기타': 'lightgray'}
+)
+fig_bar.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+
+st.plotly_chart(fig_bar, use_container_width=True)
+
+# ----------------------------
+# 📌 평당가격 단지별 산점도
+# ----------------------------
+st.subheader("③ 서울 전체 단지의 평당가격 산점도")
+
+scatter_df = data2[data2['연도'].isin(year_multi)].copy()
+scatter_df['강조'] = scatter_df['동'].apply(lambda x: '선택지역' if x in dong_multi else '기타')
+
+fig_scatter = px.scatter(
+    scatter_df,
+    x='연월_날짜',
+    y='p2',
+    color='강조',
+    hover_data=['단지명', '구', '동'],
+    title=f"📌 {', '.join(map(str, year_multi))}년 평당가격 산점도 (전 자치구 대상)",
+    labels={'p2': '평당가격(만원)', '연월_날짜': '연월'}
+)
+fig_scatter.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+
+st.plotly_chart(fig_scatter, use_container_width=True)
