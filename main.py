@@ -36,16 +36,23 @@ st.title(":cityscape: 서울 아파트 시세 대시보드")
 # ----------------------------
 st.sidebar.header(":round_pushpin: 비교 지역 선택")
 
-gu_list = sorted(data1['구'].unique())
+gu_list = ["선택하세요"] + sorted(data1['구'].unique())
 
 gu1 = st.sidebar.selectbox("자치구 (지역 1)", gu_list, key="gu1")
-dong1_list = sorted(data1[data1['구'] == gu1]['동'].unique())
-dong1 = st.sidebar.selectbox("법정동 (지역 1)", dong1_list, key="dong1")
+if gu1 != "선택하세요":
+    dong1_list = ["선택하세요"] + sorted(data1[data1['구'] == gu1]['동'].unique())
+    dong1 = st.sidebar.selectbox("법정동 (지역 1)", dong1_list, key="dong1")
+else:
+    dong1 = "선택하세요"
 
 st.sidebar.markdown("---")
-gu2 = st.sidebar.selectbox("자치구 (지역 2)", gu_list, index=1 if gu1 == gu_list[0] else 0, key="gu2")
-dong2_list = sorted(data1[data1['구'] == gu2]['동'].unique())
-dong2 = st.sidebar.selectbox("법정동 (지역 2)", dong2_list, key="dong2")
+
+gu2 = st.sidebar.selectbox("자치구 (지역 2)", gu_list, key="gu2")
+if gu2 != "선택하세요":
+    dong2_list = ["선택하세요"] + sorted(data1[data1['구'] == gu2]['동'].unique())
+    dong2 = st.sidebar.selectbox("법정동 (지역 2)", dong2_list, key="dong2")
+else:
+    dong2 = "선택하세요"
 
 st.sidebar.markdown("---")
 min_year = int(data1['연도'].min())
@@ -56,13 +63,16 @@ year_min, year_max = year_range
 # ----------------------------
 # 선택 결과 필터링
 # ----------------------------
-df1 = data1[(data1['구'] == gu1) & (data1['동'] == dong1) & (data1['연도'].between(year_min, year_max))].copy()
-df1['지역'] = f"{gu1} {dong1}"
+selected_df = pd.DataFrame()
+if gu1 != "선택하세요" and dong1 != "선택하세요":
+    df1 = data1[(data1['구'] == gu1) & (data1['동'] == dong1) & (data1['연도'].between(year_min, year_max))].copy()
+    df1['지역'] = f"{gu1} {dong1}"
+    selected_df = pd.concat([selected_df, df1], ignore_index=True)
 
-df2 = data1[(data1['구'] == gu2) & (data1['동'] == dong2) & (data1['연도'].between(year_min, year_max))].copy()
-df2['지역'] = f"{gu2} {dong2}"
-
-selected_df = pd.concat([df1, df2], ignore_index=True)
+if gu2 != "선택하세요" and dong2 != "선택하세요":
+    df2 = data1[(data1['구'] == gu2) & (data1['동'] == dong2) & (data1['연도'].between(year_min, year_max))].copy()
+    df2['지역'] = f"{gu2} {dong2}"
+    selected_df = pd.concat([selected_df, df2], ignore_index=True)
 
 # 서울 전체 평균
 seoul_avg = data1[data1['연도'].between(year_min, year_max)].groupby('연월_날짜')[['p1', 'p2']].mean().reset_index()
@@ -104,8 +114,8 @@ st.plotly_chart(fig2, use_container_width=True)
 st.subheader("2. 서울 전체 자치구 평당가격 막대그래프")
 
 avg_by_gu = data1[data1['연도'].between(year_min, year_max)].groupby('구')['p2'].mean().reset_index()
-avg_by_gu['구분'] = avg_by_gu['구'].apply(lambda x: '선택' if x in [gu1, gu2] else '기타')
 avg_by_gu = avg_by_gu.sort_values('p2', ascending=False)
+avg_by_gu['구분'] = avg_by_gu['구'].apply(lambda x: '선택' if x in [gu1, gu2] else '기타')
 
 fig_bar = px.bar(
     avg_by_gu,
@@ -127,7 +137,12 @@ st.subheader("3. 전 단지 평당가격 및 평균가격 산점도")
 scatter_df = data2[data2['연도'].between(year_min, year_max)].copy()
 scatter_df['지역'] = scatter_df['구'] + " " + scatter_df['동']
 
-highlight_regions = [f"{gu1} {dong1}", f"{gu2} {dong2}"]
+highlight_regions = []
+if gu1 != "선택하세요" and dong1 != "선택하세요":
+    highlight_regions.append(f"{gu1} {dong1}")
+if gu2 != "선택하세요" and dong2 != "선택하세요":
+    highlight_regions.append(f"{gu2} {dong2}")
+
 scatter_df['강조'] = scatter_df['지역'].apply(lambda x: '선택지역' if x in highlight_regions else '기타')
 
 fig_scatter = px.scatter(
