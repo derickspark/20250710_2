@@ -140,3 +140,55 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+
+# ----------------------------
+# ④ 다중 지역 비교: 평균가격/평당가격 추이
+# ----------------------------
+st.sidebar.markdown("---")
+st.sidebar.markdown("## 📌 지역별 비교")
+
+# 유니크 지역 리스트 만들기
+data1['지역'] = data1['구'] + " " + data1['동']
+unique_regions = sorted(data1['지역'].unique())
+
+selected_regions = st.sidebar.multiselect(
+    "비교할 지역을 선택하세요 (구 + 동)",
+    unique_regions
+)
+
+if selected_regions:
+    st.subheader("④ 선택한 지역의 월별 평균가격 및 평당가격 비교")
+
+    # 필터링
+    subset_multi = data1[data1['지역'].isin(selected_regions)].copy()
+    subset_multi = subset_multi.sort_values(['지역', '연월'])
+
+    # 평균가격 그래프 (p1)
+    fig1 = px.line(
+        subset_multi,
+        x='연월',
+        y='p1',
+        color='지역',
+        title="📊 평균가격(만원) 추이 비교",
+        labels={'p1': '평균가격(만원)', '연월': '연월'},
+    )
+    fig1.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+
+    # 평당가격 그래프 (p2)
+    fig2 = px.line(
+        subset_multi,
+        x='연월',
+        y='p2',
+        color='지역',
+        title="📊 평당가격(만원) 추이 비교",
+        labels={'p2': '평당가격(만원)', '연월': '연월'},
+    )
+    fig2.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
+
+    # 화면에 출력
+    st.plotly_chart(fig1, use_container_width=True)
+    st.plotly_chart(fig2, use_container_width=True)
+else:
+    st.info("왼쪽 사이드바에서 비교할 지역(구+동)을 하나 이상 선택하세요.")
+
