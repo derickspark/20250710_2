@@ -1,3 +1,3 @@
 import streamlit as st 
-st.title('derick's fitst webapp')
+st.title('dericks first webapp')
 st.write('it is fun!')
