@@ -42,6 +42,7 @@ st.dataframe(
     .style.format({'평균가격(만원)': '{:,.0f}', '평당가격(만원)': '{:,.0f}'})
 )
 
+
 # ----------------------------
 # ② 월별 최고/최저 단지 (data2 기준)
 # ----------------------------
@@ -59,26 +60,46 @@ else:
     min_p2_list = []
 
     for name, group in by_month:
-        max_p1_list.append(group.loc[group['p1'].idxmax()])
-        min_p1_list.append(group.loc[group['p1'].idxmin()])
-        max_p2_list.append(group.loc[group['p2'].idxmax()])
-        min_p2_list.append(group.loc[group['p2'].idxmin()])
+        max_p1 = group.loc[group['p1'].idxmax()].copy()
+        max_p1['구분'] = '최고'
+        max_p1_list.append(max_p1)
+
+        min_p1 = group.loc[group['p1'].idxmin()].copy()
+        min_p1['구분'] = '최저'
+        min_p1_list.append(min_p1)
+
+        max_p2 = group.loc[group['p2'].idxmax()].copy()
+        max_p2['구분'] = '최고'
+        max_p2_list.append(max_p2)
+
+        min_p2 = group.loc[group['p2'].idxmin()].copy()
+        min_p2['구분'] = '최저'
+        min_p2_list.append(min_p2)
+
+    df_p1 = pd.DataFrame(max_p1_list + min_p1_list)[['계약년월', '단지명', 'p1', '구분']]
+    df_p2 = pd.DataFrame(max_p2_list + min_p2_list)[['계약년월', '단지명', 'p2', '구분']]
+
+    df_p1 = df_p1.sort_values(['계약년월', '구분'])
+    df_p2 = df_p2.sort_values(['계약년월', '구분'])
 
     col1, col2 = st.columns(2)
+
     with col1:
         st.markdown("📈 **계약년월별 평균가격 최고/최저 단지**")
         st.dataframe(
-            pd.DataFrame(max_p1_list + min_p1_list)
-            .sort_values('계약년월')[['계약년월', '단지명', 'p1']]
-            .rename(columns={'p1': '평균가격(만원)'})
+            df_p1.rename(columns={'p1': '평균가격(만원)'})
+            .style.format({'평균가격(만원)': '{:,.0f}'})
         )
+
     with col2:
         st.markdown("🏢 **계약년월별 평당가격 최고/최저 단지**")
         st.dataframe(
-            pd.DataFrame(max_p2_list + min_p2_list)
-            .sort_values('계약년월')[['계약년월', '단지명', 'p2']]
-            .rename(columns={'p2': '평당가격(만원)'})
+            df_p2.rename(columns={'p2': '평당가격(만원)'})
+            .style.format({'평당가격(만원)': '{:,.0f}'})
         )
+
+
+
 
 # ----------------------------
 # ③ 선택지역 vs 기타지역 추이 (plotly)
