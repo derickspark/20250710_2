@@ -10,6 +10,13 @@ def load_data():
     return data1, data2
 
 data1, data2 = load_data()
+# 연월 컬럼을 datetime 형태로 변환
+def preprocess_dates(df):
+    df['연월_날짜'] = pd.to_datetime(df['연월'].str.replace("년 ", "-").str.replace("월", ""), format='%Y-%m')
+    return df
+
+data1 = preprocess_dates(data1)
+data2 = preprocess_dates(data2)
 
 st.set_page_config(page_title="서울 아파트 시세 분석", layout="wide")
 st.title("서울 아파트 시세 분석 대시보드")
@@ -181,22 +188,23 @@ if gu_multi and dong_multi:
         # 평균가격 그래프
         fig1 = px.line(
             subset_multi,
-            x='연월',
+            x='연월_날짜',
             y='p1',
             color='지역',
             title="📊 평균가격(만원) 추이 비교",
-            labels={'p1': '평균가격(만원)', '연월': '연월'}
+            labels={'p1': '평균가격(만원)', '연월_날짜': '연월'}
         )
+
         fig1.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
 
         # 평당가격 그래프
         fig2 = px.line(
             subset_multi,
-            x='연월',
+            x='연월_날짜',
             y='p2',
             color='지역',
             title="📊 평당가격(만원) 추이 비교",
-            labels={'p2': '평당가격(만원)', '연월': '연월'}
+            labels={'p2': '평당가격(만원)', '연월_날짜': '연월'}
         )
         fig2.update_layout(font=dict(family="Noto Sans KR", size=14), xaxis_tickangle=-45)
 
