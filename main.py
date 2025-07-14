@@ -125,7 +125,10 @@ st.plotly_chart(fig_bar, use_container_width=True)
 st.subheader("3. 전 단지 평당가격 및 평균가격 산점도")
 
 scatter_df = data2[data2['연도'].between(year_min, year_max)].copy()
-scatter_df['강조'] = scatter_df['동'].apply(lambda x: '선택지역' if x in [dong1, dong2] else '기타')
+scatter_df['지역'] = scatter_df['구'] + " " + scatter_df['동']
+
+highlight_regions = [f"{gu1} {dong1}", f"{gu2} {dong2}"]
+scatter_df['강조'] = scatter_df['지역'].apply(lambda x: '선택지역' if x in highlight_regions else '기타')
 
 fig_scatter = px.scatter(
     scatter_df,
